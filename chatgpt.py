@@ -1,35 +1,63 @@
-import os
-import sys
-import time
 import openai
-from dotenv import load_dotenv
+import json
+import requests
+
+OPENAI_API_KEY = "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"
 
 
-load_dotenv()  # Load environment variables from .env file
+class GPT:
+    def __init__(self, id):
+        self.id = id
+        self.file_name = f"{str(self.id)}.json"
+        self.session = {
+            "start": True,
+            "data": "Hi!, I'm here to help you with anything , you can ask me any question",
+            "log": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Hi!, I'm here to help you with anything , you can ask me any question",
+                },
+            ],
+        }
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Use environment variable in your code
+        try:
+            with open(self.file_name) as outfile:
+                data = json.load(outfile)
+            outfile.close()
+            self.session = data
+        except Exception:
+            with open(self.file_name, "w") as outfile:
+                json.dump(self.session, outfile)
+            outfile.close()
 
+    def bot(self, input_query):
 
+        if self.session["start"]:
 
-systemPrompt = { "role": "system", "content": "Use triple backticks with the language name for every code block in your markdown response, if any." }
-data = []
+            self.session["start"] = False
+            with open(self.file_name, "w") as outfile:
+                json.dump(self.session, outfile)
+            outfile.close()
+            return "Hi!, I'm here to help you with anything , you can ask me any question"
 
-def get_response(incoming_msg):
-    if incoming_msg == "clear":
-        data.clear()
-        data.append({"role": "assistant", "content": 'hello'})
-    else:  
-        data.append({"role": "assistant", "content": incoming_msg})
+        openai.api_key = OPENAI_API_KEY
 
-    messages = [ systemPrompt ]
-    messages.extend(data)
-    try:
+        self.session["log"].append({"role": "user", "content": input_query})
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=messages
+            messages=self.session["log"],
+            
         )
-        content = response["choices"][0]["message"]["content"]
-        return content
-    except openai.error.RateLimitError as e:
-        print(e)
-        return ""
+
+        res = response["choices"][0]["message"]["content"]
+        self.session["log"].append({"role": "assistant", "content": res})
+        self.session["data"] += res + " \n "
+        with open(self.file_name, "w") as jsonFile:
+            json.dump(self.session, jsonFile)
+        jsonFile.close()
+
+        return res
