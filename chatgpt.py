@@ -2,7 +2,7 @@ import openai
 import json
 import requests
 
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 
 
 class GPT:
